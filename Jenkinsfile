@@ -1,41 +1,28 @@
 pipeline {
     agent any
     environment{
-        DOCKER_TAG = getDockerTag()
-        NEXUS_URL  = "172.31.34.232:8080"
-        IMAGE_URL_WITH_TAG = "${NEXUS_URL}/node-app:${DOCKER_TAG}"
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
     }
     stages{
         stage('Build Docker Image'){
             steps{
-                sh "docker build . -t ${IMAGE_URL_WITH_TAG}"
+                sh "docker build -t nacho/nodetest:$BUILD_NUMBER"
             }
         }
-        stage('Nexus Push'){
+        stage('Docker Hub Login'){
             steps{
-                withCredentials([string(credentialsId: 'nexus-pwd', variable: 'nexusPwd')]) {
-                    sh "docker login -u admin -p ${nexusPwd} ${NEXUS_URL}"
-                    sh "docker push ${IMAGE_URL_WITH_TAG}"
-                }
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
             }
         }
-        stage('Docker Deploy Dev'){
+        stage('Docker push Image'){
             steps{
-                sshagent(['tomcat-dev']) {
-                    withCredentials([string(credentialsId: 'nexus-pwd', variable: 'nexusPwd')]) {
-                        sh "ssh ec2-user@172.31.0.38 docker login -u admin -p ${nexusPwd} ${NEXUS_URL}"
-                    }
-					// Remove existing container, if container name does not exists still proceed with the build
-					sh script: "ssh ec2-user@172.31.0.38 docker rm -f nodeapp",  returnStatus: true
-                    
-                    sh "ssh ec2-user@172.31.0.38 docker run -d -p 8080:8080 --name nodeapp ${IMAGE_URL_WITH_TAG}"
-                }
+                sh 'docker push nacho/nodetest:$BUILD_NUMBER'
             }
         }
     }
-}
-
-def getDockerTag(){
-    def tag  = sh script: 'git rev-parse HEAD', returnStdout: true
-    return tag
+post {
+    always {
+        sh 'docker logout'
+    }
+}    
 }
