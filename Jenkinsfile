@@ -11,7 +11,7 @@ pipeline {
                         stage ('Build Docker Image') {
                             
                                     steps{
-                                        sh "docker build -t nacho/nodetest:$BUILD_NUMBER ."
+                                        sh "docker build -t 6007021/nodetest:$BUILD_NUMBER ."
                                     }
                         }
                         
@@ -25,7 +25,7 @@ pipeline {
                         stage('Docker push Image'){
                             
                                     steps{
-                                        sh 'docker push nacho/nodetest:$BUILD_NUMBER'
+                                        sh 'docker push 6007021/nodetest:$BUILD_NUMBER'
                                     }
                         }
                 }
